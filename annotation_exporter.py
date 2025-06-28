@@ -9,7 +9,9 @@ from project_utils import create_temp_dir
 
 class AnnotationExporter:
     def __init__(self):
-        self.export_dir = create_temp_dir('exports')
+        # Create exports directory in the repository root
+        self.export_dir = os.path.join(os.getcwd(), 'exports')
+        os.makedirs(self.export_dir, exist_ok=True)
     
     def export_yolo(self, annotations, include_images=True):
         """Export annotations in YOLO format"""

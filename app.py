@@ -70,6 +70,16 @@ def main():
             help="Process every Nth frame"
         )
         
+        # Max frames setting
+        max_frames = st.number_input(
+            "Max Frames to Process",
+            min_value=10,
+            max_value=2000,
+            value=100,
+            step=10,
+            help="Maximum number of frames to extract and process"
+        )
+        
         # Update detector settings
         st.session_state.object_detector.set_confidence(confidence_threshold)
     
@@ -77,7 +87,7 @@ def main():
     tab1, tab2, tab3 = st.tabs(["📹 Video Input", "🔍 Review Annotations", "📁 Export"])
     
     with tab1:
-        video_input_tab(model_type, frame_rate)
+        video_input_tab(model_type, frame_rate, max_frames)
     
     with tab2:
         review_annotations_tab()
@@ -85,7 +95,7 @@ def main():
     with tab3:
         export_annotations_tab()
 
-def video_input_tab(model_type, frame_rate):
+def video_input_tab(model_type, frame_rate, max_frames):
     st.header("Video Input")
     
     # Input method selection
@@ -104,7 +114,7 @@ def video_input_tab(model_type, frame_rate):
         
         if st.button("Download and Process", type="primary"):
             if youtube_url:
-                process_youtube_video(youtube_url, model_type, frame_rate)
+                process_youtube_video(youtube_url, model_type, frame_rate, max_frames)
             else:
                 st.error("Please enter a valid YouTube URL")
     
@@ -116,9 +126,9 @@ def video_input_tab(model_type, frame_rate):
         )
         
         if uploaded_file is not None and st.button("Process Video", type="primary"):
-            process_uploaded_video(uploaded_file, model_type, frame_rate)
+            process_uploaded_video(uploaded_file, model_type, frame_rate, max_frames)
 
-def process_youtube_video(url, model_type, frame_rate):
+def process_youtube_video(url, model_type, frame_rate, max_frames):
     """Process YouTube video for object detection"""
     with st.spinner("Downloading video from YouTube..."):
         try:
@@ -126,13 +136,13 @@ def process_youtube_video(url, model_type, frame_rate):
             video_path = st.session_state.video_processor.download_youtube_video(url)
             if video_path:
                 st.success(f"Video downloaded successfully!")
-                process_video_frames(video_path, model_type, frame_rate)
+                process_video_frames(video_path, model_type, frame_rate, max_frames)
             else:
                 st.error("Failed to download video from YouTube")
         except Exception as e:
             st.error(f"Error downloading video: {str(e)}")
 
-def process_uploaded_video(uploaded_file, model_type, frame_rate):
+def process_uploaded_video(uploaded_file, model_type, frame_rate, max_frames):
     """Process uploaded video file"""
     with st.spinner("Processing uploaded video..."):
         try:
@@ -144,11 +154,11 @@ def process_uploaded_video(uploaded_file, model_type, frame_rate):
                 f.write(uploaded_file.getvalue())
             
             st.success("Video uploaded successfully!")
-            process_video_frames(video_path, model_type, frame_rate)
+            process_video_frames(video_path, model_type, frame_rate, max_frames)
         except Exception as e:
             st.error(f"Error processing uploaded video: {str(e)}")
 
-def process_video_frames(video_path, model_type, frame_rate):
+def process_video_frames(video_path, model_type, frame_rate, max_frames):
     """Extract frames and run object detection"""
     st.session_state.current_video_path = video_path
     
@@ -156,7 +166,8 @@ def process_video_frames(video_path, model_type, frame_rate):
         try:
             frames = st.session_state.video_processor.extract_frames(
                 video_path, 
-                frame_rate=frame_rate
+                frame_rate=frame_rate,
+                max_frames=max_frames
             )
             
             if not frames:

@@ -40,3 +40,7 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "uv add torch torchvision opencv-python yt-dlp pandas pillow"
+
+[[ports]]
+localPort = 5000
+externalPort = 80

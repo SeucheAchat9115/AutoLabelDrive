@@ -11,7 +11,7 @@ import numpy as np
 from video_processor import VideoProcessor
 from object_detector import ObjectDetector
 from annotation_exporter import AnnotationExporter
-from utils import create_temp_dir, cleanup_temp_files
+from project_utils import create_temp_dir, cleanup_temp_files
 
 # Configure page
 st.set_page_config(

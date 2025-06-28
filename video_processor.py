@@ -4,7 +4,7 @@ import yt_dlp
 import tempfile
 from pathlib import Path
 import streamlit as st
-from utils import create_temp_dir
+from project_utils import create_temp_dir
 
 class VideoProcessor:
     def __init__(self):

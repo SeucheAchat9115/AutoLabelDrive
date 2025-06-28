@@ -98,6 +98,7 @@ def video_input_tab(model_type, frame_rate):
     if input_method == "YouTube URL":
         youtube_url = st.text_input(
             "Enter YouTube URL:",
+            value="https://youtu.be/YBS8rkP4yCg?si=-2Hr5QkTSAF-5knT",
             placeholder="https://www.youtube.com/watch?v=..."
         )
         
@@ -258,7 +259,7 @@ def review_annotations_tab():
         # Draw bounding boxes
         annotated_frame = draw_bounding_boxes(frame_rgb, annotation['detections'])
         
-        st.image(annotated_frame, caption=f"Frame {st.session_state.current_frame_index + 1}", use_column_width=True)
+        st.image(annotated_frame, caption=f"Frame {st.session_state.current_frame_index + 1}", use_container_width=True)
         
         # Show detection details
         if annotation['detections']:

@@ -280,12 +280,22 @@ def review_annotations_tab():
         return
     
     # Display mode selection
-    display_mode = st.radio(
-        "Display Mode:",
-        ["Object Detection Only", "Semantic Segmentation Only", "Combined View"],
-        horizontal=True,
-        disabled=not bool(st.session_state.segmentations)
-    )
+    has_segmentation = bool(st.session_state.segmentations)
+    
+    if has_segmentation:
+        display_mode = st.radio(
+            "Display Mode:",
+            ["Object Detection Only", "Semantic Segmentation Only", "Combined View"],
+            horizontal=True
+        )
+    else:
+        display_mode = st.radio(
+            "Display Mode:",
+            ["Object Detection Only"],
+            horizontal=True,
+            help="Enable semantic segmentation in the sidebar to unlock additional display modes"
+        )
+        display_mode = "Object Detection Only"  # Force to detection only
     
     # Frame navigation
     col1, col2, col3, col4 = st.columns([1, 1, 1, 3])

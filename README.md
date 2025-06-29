@@ -11,6 +11,11 @@ A Streamlit-based web application for automatically detecting and annotating obj
   - Pedestrians
   - Bicycles
   - Traffic signs and lights
+- **Semantic Segmentation**: DeepLabV3-based pixel-level segmentation for detailed scene understanding:
+  - Road surface detection
+  - Sidewalk and building identification
+  - Vegetation and sky segmentation
+  - Combined detection + segmentation visualization
 - **Interactive Review**: Browse through detected frames with bounding box visualizations
 - **Multiple Export Formats**:
   - YOLO format for training
@@ -44,14 +49,17 @@ A Streamlit-based web application for automatically detecting and annotating obj
 
 ### 2. Configuration (Sidebar)
 - **Model Selection**: Choose between YOLOv5s, YOLOv5m, or YOLOv5l
+- **Semantic Segmentation**: Enable pixel-level segmentation for detailed scene analysis
 - **Confidence Threshold**: Set minimum confidence for detections (0.1-1.0)
 - **Frame Sampling Rate**: Process every Nth frame (1-30)
 - **Max Frames**: Limit processing to specified number of frames (10-2000)
 
 ### 3. Review Annotations
 - Navigate through processed frames
+- Choose display mode: Object Detection Only, Semantic Segmentation Only, or Combined View
 - View bounding boxes with class labels and confidence scores
-- See detection statistics
+- See pixel-level segmentation statistics and coverage percentages
+- Analyze both object-level and scene-level information
 
 ### 4. Export Annotations
 - Choose export format (YOLO, COCO JSON, or CSV)

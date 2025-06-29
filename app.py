@@ -11,6 +11,7 @@ import numpy as np
 from video_processor import VideoProcessor
 from object_detector import ObjectDetector
 from annotation_exporter import AnnotationExporter
+from semantic_segmenter import SemanticSegmenter
 from project_utils import create_temp_dir, cleanup_temp_files
 
 # Configure page
@@ -25,6 +26,8 @@ if 'video_processor' not in st.session_state:
     st.session_state.video_processor = VideoProcessor()
 if 'object_detector' not in st.session_state:
     st.session_state.object_detector = ObjectDetector()
+if 'semantic_segmenter' not in st.session_state:
+    st.session_state.semantic_segmenter = SemanticSegmenter()
 if 'annotation_exporter' not in st.session_state:
     st.session_state.annotation_exporter = AnnotationExporter()
 if 'current_video_path' not in st.session_state:
@@ -33,12 +36,14 @@ if 'frames' not in st.session_state:
     st.session_state.frames = []
 if 'annotations' not in st.session_state:
     st.session_state.annotations = {}
+if 'segmentations' not in st.session_state:
+    st.session_state.segmentations = {}
 if 'current_frame_index' not in st.session_state:
     st.session_state.current_frame_index = 0
 
 def main():
     st.title("🚗 Auto-Labeling Tool for Autonomous Driving")
-    st.markdown("Automatically detect and annotate objects in YouTube videos for autonomous driving applications.")
+    st.markdown("Automatically detect and annotate objects in YouTube videos with object detection and semantic segmentation for autonomous driving applications.")
     
     # Sidebar for configuration
     with st.sidebar:
@@ -49,6 +54,13 @@ def main():
             "Select Detection Model",
             ["YOLOv5s", "YOLOv5m", "YOLOv5l"],
             help="Larger models are more accurate but slower"
+        )
+        
+        # Segmentation toggle
+        enable_segmentation = st.checkbox(
+            "Enable Semantic Segmentation",
+            value=False,
+            help="Add pixel-level semantic segmentation (slower but more detailed)"
         )
         
         # Confidence threshold
@@ -87,7 +99,7 @@ def main():
     tab1, tab2, tab3 = st.tabs(["📹 Video Input", "🔍 Review Annotations", "📁 Export"])
     
     with tab1:
-        video_input_tab(model_type, frame_rate, max_frames)
+        video_input_tab(model_type, frame_rate, max_frames, enable_segmentation)
     
     with tab2:
         review_annotations_tab()
@@ -95,7 +107,7 @@ def main():
     with tab3:
         export_annotations_tab()
 
-def video_input_tab(model_type, frame_rate, max_frames):
+def video_input_tab(model_type, frame_rate, max_frames, enable_segmentation):
     st.header("Video Input")
     
     # Input method selection
@@ -114,7 +126,7 @@ def video_input_tab(model_type, frame_rate, max_frames):
         
         if st.button("Download and Process", type="primary"):
             if youtube_url:
-                process_youtube_video(youtube_url, model_type, frame_rate, max_frames)
+                process_youtube_video(youtube_url, model_type, frame_rate, max_frames, enable_segmentation)
             else:
                 st.error("Please enter a valid YouTube URL")
     
@@ -126,9 +138,9 @@ def video_input_tab(model_type, frame_rate, max_frames):
         )
         
         if uploaded_file is not None and st.button("Process Video", type="primary"):
-            process_uploaded_video(uploaded_file, model_type, frame_rate, max_frames)
+            process_uploaded_video(uploaded_file, model_type, frame_rate, max_frames, enable_segmentation)
 
-def process_youtube_video(url, model_type, frame_rate, max_frames):
+def process_youtube_video(url, model_type, frame_rate, max_frames, enable_segmentation):
     """Process YouTube video for object detection"""
     with st.spinner("Downloading video from YouTube..."):
         try:
@@ -136,13 +148,13 @@ def process_youtube_video(url, model_type, frame_rate, max_frames):
             video_path = st.session_state.video_processor.download_youtube_video(url)
             if video_path:
                 st.success(f"Video downloaded successfully!")
-                process_video_frames(video_path, model_type, frame_rate, max_frames)
+                process_video_frames(video_path, model_type, frame_rate, max_frames, enable_segmentation)
             else:
                 st.error("Failed to download video from YouTube")
         except Exception as e:
             st.error(f"Error downloading video: {str(e)}")
 
-def process_uploaded_video(uploaded_file, model_type, frame_rate, max_frames):
+def process_uploaded_video(uploaded_file, model_type, frame_rate, max_frames, enable_segmentation):
     """Process uploaded video file"""
     with st.spinner("Processing uploaded video..."):
         try:
@@ -154,11 +166,11 @@ def process_uploaded_video(uploaded_file, model_type, frame_rate, max_frames):
                 f.write(uploaded_file.getvalue())
             
             st.success("Video uploaded successfully!")
-            process_video_frames(video_path, model_type, frame_rate, max_frames)
+            process_video_frames(video_path, model_type, frame_rate, max_frames, enable_segmentation)
         except Exception as e:
             st.error(f"Error processing uploaded video: {str(e)}")
 
-def process_video_frames(video_path, model_type, frame_rate, max_frames):
+def process_video_frames(video_path, model_type, frame_rate, max_frames, enable_segmentation):
     """Extract frames and run object detection"""
     st.session_state.current_video_path = video_path
     
@@ -181,20 +193,37 @@ def process_video_frames(video_path, model_type, frame_rate, max_frames):
             st.error(f"Error extracting frames: {str(e)}")
             return
     
-    # Load model if not already loaded
+    # Load models if not already loaded
     with st.spinner(f"Loading {model_type} model..."):
         try:
             st.session_state.object_detector.load_model(model_type.lower())
-            st.success("Model loaded successfully!")
+            st.success("Object detection model loaded successfully!")
         except Exception as e:
-            st.error(f"Error loading model: {str(e)}")
+            st.error(f"Error loading detection model: {str(e)}")
             return
     
-    # Run object detection on frames
-    with st.spinner("Running object detection on frames..."):
+    # Load segmentation model if enabled
+    if enable_segmentation:
+        with st.spinner("Loading semantic segmentation model..."):
+            try:
+                st.session_state.semantic_segmenter.load_model('deeplabv3_resnet50')
+                st.success("Semantic segmentation model loaded successfully!")
+            except Exception as e:
+                st.error(f"Error loading segmentation model: {str(e)}")
+                # Continue without segmentation
+                enable_segmentation = False
+    
+    # Run object detection and segmentation on frames
+    processing_text = "Running object detection"
+    if enable_segmentation:
+        processing_text += " and semantic segmentation"
+    processing_text += " on frames..."
+    
+    with st.spinner(processing_text):
         try:
             progress_bar = st.progress(0)
             annotations = {}
+            segmentations = {}
             
             for i, frame_path in enumerate(frames):
                 # Load frame
@@ -203,24 +232,45 @@ def process_video_frames(video_path, model_type, frame_rate, max_frames):
                 
                 # Run detection
                 detections = st.session_state.object_detector.detect_objects(frame_rgb)
+                
+                # Run segmentation if enabled
+                segmentation_mask = None
+                if enable_segmentation:
+                    try:
+                        segmentation_mask = st.session_state.semantic_segmenter.segment_image(frame_rgb)
+                    except Exception as e:
+                        st.warning(f"Segmentation failed for frame {i}: {str(e)}")
+                
                 annotations[i] = {
                     'frame_path': frame_path,
                     'detections': detections,
                     'frame_shape': frame_rgb.shape
                 }
                 
+                if segmentation_mask is not None:
+                    segmentations[i] = {
+                        'frame_path': frame_path,
+                        'segmentation_mask': segmentation_mask,
+                        'frame_shape': frame_rgb.shape
+                    }
+                
                 # Update progress
                 progress_bar.progress((i + 1) / len(frames))
             
             st.session_state.annotations = annotations
-            st.success(f"Object detection completed on {len(frames)} frames!")
+            st.session_state.segmentations = segmentations
             
             # Show summary
             total_detections = sum(len(ann['detections']) for ann in annotations.values())
-            st.info(f"Total detections found: {total_detections}")
+            summary_text = f"Object detection completed on {len(frames)} frames! Total detections: {total_detections}"
+            
+            if enable_segmentation and segmentations:
+                summary_text += f"\nSemantic segmentation completed on {len(segmentations)} frames!"
+            
+            st.success(summary_text)
             
         except Exception as e:
-            st.error(f"Error during object detection: {str(e)}")
+            st.error(f"Error during processing: {str(e)}")
 
 def review_annotations_tab():
     st.header("Review Annotations")
@@ -228,6 +278,14 @@ def review_annotations_tab():
     if not st.session_state.annotations:
         st.info("No annotations available. Please process a video first.")
         return
+    
+    # Display mode selection
+    display_mode = st.radio(
+        "Display Mode:",
+        ["Object Detection Only", "Semantic Segmentation Only", "Combined View"],
+        horizontal=True,
+        disabled=not bool(st.session_state.segmentations)
+    )
     
     # Frame navigation
     col1, col2, col3, col4 = st.columns([1, 1, 1, 3])
@@ -267,25 +325,71 @@ def review_annotations_tab():
         frame = cv2.imread(annotation['frame_path'])
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
-        # Draw bounding boxes
-        annotated_frame = draw_bounding_boxes(frame_rgb, annotation['detections'])
+        # Get segmentation data if available
+        segmentation_data = st.session_state.segmentations.get(st.session_state.current_frame_index)
+        
+        # Generate display based on mode
+        if display_mode == "Object Detection Only":
+            annotated_frame = draw_bounding_boxes(frame_rgb, annotation['detections'])
+        elif display_mode == "Semantic Segmentation Only" and segmentation_data:
+            annotated_frame = st.session_state.semantic_segmenter.visualize_segmentation(
+                frame_rgb, segmentation_data['segmentation_mask']
+            )
+        elif display_mode == "Combined View" and segmentation_data:
+            annotated_frame = st.session_state.semantic_segmenter.combine_with_detection(
+                frame_rgb, annotation['detections'], segmentation_data['segmentation_mask']
+            )
+        else:
+            # Fallback to detection only
+            annotated_frame = draw_bounding_boxes(frame_rgb, annotation['detections'])
         
         st.image(annotated_frame, caption=f"Frame {st.session_state.current_frame_index + 1}", use_container_width=True)
         
-        # Show detection details
-        if annotation['detections']:
-            st.subheader("Detections in this frame:")
-            detection_data = []
-            for det in annotation['detections']:
-                detection_data.append({
-                    'Class': det['class'],
-                    'Confidence': f"{det['confidence']:.2f}",
-                    'Bounding Box': f"({det['bbox'][0]:.0f}, {det['bbox'][1]:.0f}, {det['bbox'][2]:.0f}, {det['bbox'][3]:.0f})"
-                })
-            
-            st.dataframe(pd.DataFrame(detection_data), use_container_width=True)
-        else:
-            st.info("No detections found in this frame.")
+        # Show analysis details based on display mode
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Show detection details
+            if annotation['detections']:
+                st.subheader("Object Detections:")
+                detection_data = []
+                for det in annotation['detections']:
+                    detection_data.append({
+                        'Class': det['class'],
+                        'Confidence': f"{det['confidence']:.2f}",
+                        'Bounding Box': f"({det['bbox'][0]:.0f}, {det['bbox'][1]:.0f}, {det['bbox'][2]:.0f}, {det['bbox'][3]:.0f})"
+                    })
+                
+                st.dataframe(pd.DataFrame(detection_data), use_container_width=True)
+            else:
+                st.info("No detections found in this frame.")
+        
+        with col2:
+            # Show segmentation statistics if available
+            if segmentation_data and display_mode != "Object Detection Only":
+                st.subheader("Segmentation Statistics:")
+                seg_stats = st.session_state.semantic_segmenter.get_segmentation_stats(
+                    segmentation_data['segmentation_mask']
+                )
+                
+                if seg_stats:
+                    stats_data = []
+                    for class_name, stats in seg_stats.items():
+                        if stats['percentage'] > 0.1:  # Only show classes with >0.1% coverage
+                            stats_data.append({
+                                'Class': class_name,
+                                'Coverage': f"{stats['percentage']:.1f}%",
+                                'Pixels': stats['pixel_count']
+                            })
+                    
+                    if stats_data:
+                        st.dataframe(pd.DataFrame(stats_data), use_container_width=True)
+                    else:
+                        st.info("No significant segments found.")
+                else:
+                    st.info("No segmentation data available.")
+            elif display_mode == "Object Detection Only":
+                st.info("Enable segmentation to see pixel-level analysis.")
 
 def draw_bounding_boxes(image, detections):
     """Draw bounding boxes on image"""

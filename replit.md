@@ -96,6 +96,9 @@ The application is designed for deployment on Replit with the following consider
 - Optional: GPU acceleration for faster inference
 
 ## Recent Changes
+- June 28, 2025: Added SAM2-style semantic segmentation using DeepLabV3 for pixel-level scene understanding
+- June 28, 2025: Integrated combined object detection + semantic segmentation visualization modes
+- June 28, 2025: Added segmentation statistics display with coverage percentages and pixel counts
 - June 28, 2025: Added max frame limit setting (default 100) in sidebar for controlled processing
 - June 28, 2025: Updated export system to save files in local 'exports' directory instead of temp files
 - June 28, 2025: Fixed naming conflict by renaming utils.py to project_utils.py (YOLOv5 compatibility)

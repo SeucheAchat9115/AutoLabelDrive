@@ -95,8 +95,15 @@ The application is designed for deployment on Replit with the following consider
 - Internet connectivity for model downloads and YouTube access
 - Optional: GPU acceleration for faster inference
 
+## Recent Changes
+- June 28, 2025: Added max frame limit setting (default 100) in sidebar for controlled processing
+- June 28, 2025: Updated export system to save files in local 'exports' directory instead of temp files
+- June 28, 2025: Fixed naming conflict by renaming utils.py to project_utils.py (YOLOv5 compatibility)
+- June 28, 2025: Added comprehensive README.md and .gitignore for project documentation
+- June 28, 2025: Set default YouTube URL for easy testing of dashcam footage
+
 ## Changelog
-- June 28, 2025. Initial setup
+- June 28, 2025. Initial setup and core functionality implementation
 
 ## User Preferences
 
